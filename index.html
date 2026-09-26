@@ -4,39 +4,252 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>What Are We Actually Decoding?</title>
-<meta name="description" content="Source attribution for non-invasive brain-to-language retrieval. Anonymous submission.">
+<meta name="description" content="Retrieval-based source attribution for non-invasive neural language decoding: read the score at the decoder input and trace it to structure in the input, evidence within a window, and context across windows.">
+<meta property="og:title" content="What Are We Actually Decoding?">
+<meta property="og:description" content="Duration-matched noise gets 66.3% R@1 vs 90.8% for MEG in an end-to-end sentence decoder. Source attribution traces where such scores come from.">
+<meta property="og:image" content="static/figs/overview.png">
 <style>
-  :root { --ink:#1f2328; --muted:#57606a; --line:#d0d7de; --accent:#2e75b6; --bg:#ffffff; }
-  @media (prefers-color-scheme: dark) {
-    :root { --ink:#e6edf3; --muted:#9aa4ae; --line:#30363d; --accent:#5b9bd5; --bg:#0d1117; }
+  :root {
+    --ink:#1f2328; --muted:#59636e; --line:#d8dee4; --soft:#f6f8fa;
+    --accent:#2e75b6; --accent-soft:#eaf2fb; --warm:#d9661f; --bg:#ffffff; --card:#ffffff;
   }
-  * { box-sizing: border-box; }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ink:#e6edf3; --muted:#9aa5b1; --line:#30363d; --soft:#161b22;
+      --accent:#6aa9e6; --accent-soft:#12263a; --warm:#f0935a; --bg:#0d1117; --card:#ffffff;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ink:#e6edf3; --muted:#9aa5b1; --line:#30363d; --soft:#161b22;
+    --accent:#6aa9e6; --accent-soft:#12263a; --warm:#f0935a; --bg:#0d1117; --card:#ffffff;
+  }
+  * { box-sizing:border-box; }
+  html { scroll-behavior:smooth; }
   body { margin:0; background:var(--bg); color:var(--ink);
-         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; line-height:1.6; }
-  main { max-width: 820px; margin: 0 auto; padding: 72px 16px 48px; text-align: center; }
-  h1 { font-size: clamp(1.8rem, 4vw, 2.6rem); line-height:1.2; margin: 0 0 12px; }
-  .sub { font-size: 1.15rem; color: var(--muted); margin: 0 0 24px; }
-  .authors { font-size: 1.05rem; margin: 0 0 4px; }
-  .venue { color: var(--muted); margin: 0 0 28px; }
-  .links { display:flex; gap:12px; justify-content:center; flex-wrap:wrap; margin-bottom: 40px; }
-  .btn { display:inline-block; padding:8px 18px; border-radius:999px; border:1px solid var(--line);
-         color:var(--ink); text-decoration:none; font-weight:600; }
-  .btn:hover { border-color: var(--accent); color: var(--accent); }
-  .btn.disabled { color: var(--muted); pointer-events:none; }
-  .note { border-top:1px solid var(--line); padding-top:28px; color:var(--muted); }
+         font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+         font-size:17px; line-height:1.65; -webkit-font-smoothing:antialiased; }
+  a { color:var(--accent); }
+  .wrap { max-width:880px; margin:0 auto; padding:0 16px; }
+  .wide { max-width:1080px; margin:0 auto; padding:0 16px; }
+
+  header.hero { text-align:center; padding:64px 0 28px; }
+  h1 { font-size:clamp(2rem, 5vw, 3rem); line-height:1.15; margin:0 0 10px; letter-spacing:-0.01em; }
+  .sub { font-size:clamp(1.05rem, 2.4vw, 1.3rem); color:var(--muted); margin:0 auto 22px; max-width:720px; }
+  .authors { font-size:1.05rem; margin:0; }
+  .venue { color:var(--muted); margin:2px 0 26px; font-size:0.97rem; }
+  .links { display:flex; gap:10px; justify-content:center; flex-wrap:wrap; }
+  .btn { display:inline-flex; align-items:center; gap:8px; padding:9px 20px; border-radius:999px;
+         background:var(--ink); color:var(--bg); text-decoration:none; font-weight:600; font-size:0.95rem; }
+  .btn:hover { opacity:0.85; }
+  .btn.ghost { background:transparent; color:var(--ink); border:1px solid var(--line); }
+  .btn.disabled { background:transparent; color:var(--muted); border:1px dashed var(--line); pointer-events:none; }
+  .btn svg { width:16px; height:16px; fill:currentColor; }
+
+  .tldr { margin:34px auto 0; padding:18px 22px; background:var(--accent-soft); border-left:4px solid var(--accent);
+          border-radius:6px; text-align:left; }
+  .tldr b { color:var(--accent); }
+
+  section { padding:40px 0 8px; }
+  h2 { font-size:1.6rem; margin:0 0 14px; letter-spacing:-0.005em; }
+  h3 { font-size:1.15rem; margin:26px 0 8px; }
+  p { margin:0 0 14px; }
+  .lead { font-size:1.08rem; }
+
+  figure { margin:22px 0 8px; }
+  figure .frame { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:14px; }
+  figure img { display:block; width:100%; height:auto; }
+  figcaption { color:var(--muted); font-size:0.92rem; margin-top:10px; line-height:1.55; }
+  figcaption b { color:var(--ink); }
+
+  .stats { display:grid; grid-template-columns:repeat(3, 1fr); gap:14px; margin:18px 0 6px; }
+  .stat { border:1px solid var(--line); border-radius:10px; padding:18px 18px 16px; background:var(--soft); }
+  .stat .num { font-size:2.1rem; font-weight:700; line-height:1.1; letter-spacing:-0.02em; }
+  .stat .num small { font-size:1rem; font-weight:600; color:var(--muted); margin-left:4px; }
+  .stat .label { font-size:0.93rem; color:var(--muted); margin-top:8px; line-height:1.5; }
+  .stat.warm .num { color:var(--warm); }
+  .stat.cool .num { color:var(--accent); }
+
+  .sources { display:grid; grid-template-columns:repeat(3, 1fr); gap:14px; margin:16px 0 4px; }
+  .source { border-top:3px solid var(--accent); background:var(--soft); border-radius:0 0 8px 8px; padding:14px 16px; }
+  .source h4 { margin:0 0 6px; font-size:1rem; }
+  .source p { margin:0; font-size:0.93rem; color:var(--muted); line-height:1.55; }
+
+  .table-scroll { overflow-x:auto; margin:18px 0 6px; }
+  table { border-collapse:collapse; width:100%; font-size:0.93rem; font-variant-numeric:tabular-nums; }
+  th, td { padding:7px 10px; text-align:right; border-bottom:1px solid var(--line); white-space:nowrap; }
+  th:first-child, td:first-child, th:nth-child(2), td:nth-child(2) { text-align:left; }
+  thead th { font-weight:600; border-bottom:2px solid var(--ink); }
+  tr.hl td { font-weight:700; }
+  .gain { color:var(--accent); }
+
+  .takeaway { margin:10px 0 0; padding:20px 22px; border:1px solid var(--line); border-radius:10px; }
+  .takeaway ol { margin:6px 0 0; padding-left:22px; }
+  .takeaway li { margin:6px 0; }
+
+  pre { background:var(--soft); border:1px solid var(--line); border-radius:8px; padding:16px; overflow-x:auto;
+        font-size:0.85rem; line-height:1.5; }
+  footer { color:var(--muted); font-size:0.88rem; text-align:center; padding:40px 0 56px; }
+
+  @media (max-width:720px) {
+    body { font-size:16px; }
+    header.hero { padding-top:44px; }
+    .stats, .sources { grid-template-columns:1fr; }
+    figure .frame { padding:8px; }
+  }
 </style>
 </head>
 <body>
-<main>
+
+<header class="hero wrap">
   <h1>What Are We Actually Decoding?</h1>
-  <p class="sub">Source Attribution for Non-Invasive Brain-to-Language Retrieval</p>
+  <p class="sub">Retrieval-Based Source Attribution for Non-Invasive Neural Language Decoding</p>
   <p class="authors">Anonymous Authors</p>
   <p class="venue">Anonymous submission, under review</p>
   <div class="links">
-    <span class="btn disabled">Paper (coming soon)</span>
-    <a class="btn" href="https://anonymous.4open.science/r/AuditNeuralDecoding/">Code</a>
+    <span class="btn disabled">
+      <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 1h7l3 3v11H3V1zm6.5 1.5V5h2.5L9.5 2.5zM5 8h6v1H5V8zm0 2h6v1H5v-1zm0 2h4v1H5v-1z"/></svg>
+      Paper (coming soon)
+    </span>
+    <a class="btn" href="https://anonymous.4open.science/r/AuditNeuralDecoding/">
+      <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+      Code
+    </a>
+    <a class="btn ghost" href="#bibtex">BibTeX</a>
   </div>
-  <p class="note">This project page is being prepared and will be updated before the review period.</p>
+
+  <div class="tldr">
+    <b>TL;DR</b> Duration-matched noise gets 66.3% R@1 vs 90.8% for MEG in an end-to-end sentence decoder. Source attribution reads scores at the decoder input and credits a contextual gain to the brain only if it falls with local evidence and vanishes without it.
+  </div>
+</header>
+
+<div class="wide">
+  <figure>
+    <div class="frame"><img src="static/figs/overview.png" alt="Source attribution overview: the readout sits before the decoder; panels show structure in the input, evidence within a window, and context across windows."></div>
+    <figcaption><b>Source attribution: where the score is read out, and the three sources it is traced to.</b> The readout sits before the decoder and ranks the correct stimulus among the test stimuli, so the decoder's prior and the text metric do not enter the score. <b>(a)</b> Duration-preserving noise shows how much of the score non-neural cues support: near chance on invasive ECoG, most of it on MEG. <b>(b)</b> Fixed-duration windows are ranked against the time-aligned audio of held-out stimuli. <b>(c)</b> A contextual stage pools frozen window scores within a sentence and shifts whole candidate sentences; the readout before and after it attributes the change to that stage.</figcaption>
+  </figure>
+</div>
+
+<main class="wrap">
+
+<section id="abstract">
+  <h2>Abstract</h2>
+  <p>Non-invasive neural language decoding has advanced rapidly, with end-to-end systems now turning MEG and EEG into fluent sentences. However, a high score may come from the decoder's language prior, the text metric, or the input structure rather than the brain, and the output alone cannot distinguish them. In this work, we ask where such scores come from. We find that in an end-to-end sentence decoding pipeline, input duration alone supports most of the score: scored before the decoder, Gaussian noise of the same duration keeps <b>66.3% sentence-retrieval R@1 against 90.8% for real MEG</b>, a shortcut absent from an earlier invasive ECoG control and missed by noise controls scored at the output. We propose <b>source attribution</b>, which reads the score out at the decoder's input, where evaluation becomes retrieval with a known chance level, and gives each of three sources&mdash;structure in the input, evidence within a window, and context across windows&mdash;its own control. With duration removed, word-locked MEG windows still identify their audio among 1,464 candidates for <b>44% of windows</b>, while noise stays at chance. We further state that a contextual gain can be credited to the brain only if it <b>falls with this local evidence and vanishes without it</b>. A training-free aggregation meets this criterion on two MEG datasets, raising R@1 by 7.7 and 6.9 points, and yields no spurious gain on EEG, where local evidence is very weak; a stage that uses sentence length in place of evidence fails it. Crucially, source attribution requires no change to a pipeline's task, architecture, or training, suggesting broad applicability across encoder&ndash;decoder pipelines. By turning whether a decoder reads the brain from an assumption into a measurement, it lays a foundation for trustworthy non-invasive language decoding.</p>
+</section>
+
+<section id="findings">
+  <h2>Three findings</h2>
+  <div class="stats">
+    <div class="stat warm">
+      <div class="num">66.3%<small>R@1</small></div>
+      <div class="label">Duration-matched Gaussian noise, scored before the decoder of an end-to-end MEG pipeline, against 90.8% for real MEG (chance 0.8%).</div>
+    </div>
+    <div class="stat cool">
+      <div class="num">44.4%<small>R@1</small></div>
+      <div class="label">Fixed-duration MEG windows rank their audio first among 1,464 candidates, about 650&times; chance; noise stays at chance.</div>
+    </div>
+    <div class="stat cool">
+      <div class="num">+7.7<small>pp</small></div>
+      <div class="label">Contextual gain on Gwilliams (+6.9 on MOUS) that falls with local evidence and vanishes without it; none on EEG.</div>
+    </div>
+  </div>
+</section>
+
+<section id="method">
+  <h2>Source attribution</h2>
+  <p class="lead">Encoder&ndash;decoder pipelines are scored on the output text, after the decoder's language prior, its decoding strategy, and the text metric have all entered. We move the readout to the decoder input.</p>
+  <p>At that point no text has been generated, but the test stimuli form a finite, known set, so the readout ranks the presented stimulus among them. Its chance level is known, and retrieval-based and generation-based decoding meet here: the former stops, the latter continues, so any generation pipeline can be read out the same way. Each source of the score then gets a control that removes that source and keeps everything else.</p>
+  <div class="sources">
+    <div class="source">
+      <h4>Structure in the input</h4>
+      <p>A signal-blind control replaces only the neural content and keeps length, padding, and masks. Any score it keeps comes from the input's structure, not the brain.</p>
+    </div>
+    <div class="source">
+      <h4>Evidence within a window</h4>
+      <p>Fixed-duration, word-locked windows and stimulus-identity splits keep structure out, so what remains of the ranking rests on neural content.</p>
+    </div>
+    <div class="source">
+      <h4>Context across windows</h4>
+      <p>Context re-enters as a separate stage on frozen local scores. Its gain is credited to the brain only if it falls with local evidence and vanishes without it.</p>
+    </div>
+  </div>
+</section>
+
+<section id="shortcut">
+  <h2>A length shortcut hidden at the output</h2>
+  <p>We reproduce a Whisper-based end-to-end sentence decoder and score it before its text decoder, with participants held out. Real MEG reaches 90.8% R@1; Gaussian noise within the valid length, with padding and masks unchanged, still reaches 66.3%. The noise keeps only the input's duration, so duration alone supports most of the score. With fixed-duration inputs, noise no longer scores high.</p>
+  <p>Earlier checks pointed the other way. In invasive ECoG decoding, a network trained on noise of the correct length stayed near chance, and non-invasive noise tests that replace the whole input and score the output text report BLEU-1 near zero. The shortcut becomes visible only when the score is read before the decoder and the control replaces only the neural content.</p>
+  <figure>
+    <div class="frame"><img src="static/figs/length_shortcut.png" alt="Bar charts: with variable-length inputs, real MEG 90.8% and noise 66.3% R@1 (chance 0.8%); with fixed-duration inputs, real MEG 5.10%, noise 1.53%, chance 0.05%."></div>
+    <figcaption><b>Length-shortcut diagnostic.</b> Left: with variable-length sentence inputs, ranking the correct sentence among the evaluation sentences succeeds even with duration-preserving noise in place of MEG (chance 0.8%). Right: with fixed-duration inputs and a token-level readout over the 2,048-entry codebook, noise no longer scores high (chance 0.05%). The two panels use different readouts with different chance levels and are not directly comparable.</figcaption>
+  </figure>
+</section>
+
+<section id="evidence">
+  <h2>What the brain signal supports on its own</h2>
+  <p>With fixed-duration windows and stimulus-identity splits, above-chance ranking requires neural content. Gaussian inputs stay at chance, whereas real MEG ranks its time-aligned audio first for 44.4% of windows among 1,464 candidates on Gwilliams and 21.7% among 825 on MOUS. Every participant is above chance.</p>
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr><th>Dataset</th><th>Input / encoder</th><th>R@1 (%)</th><th>R@10 (%)</th><th>Median rank</th><th>&Delta;R@1 with context (pp)</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Gwilliams (N = 1,464)</td><td>Chance</td><td>0.07</td><td>0.68</td><td>732</td><td>&ndash;</td></tr>
+        <tr><td></td><td>Gaussian input</td><td>0.07</td><td>0.69</td><td>731</td><td>&minus;0.01</td></tr>
+        <tr class="hl"><td></td><td>Real MEG (Dense-TCNN)</td><td>44.4</td><td>73.6</td><td>2</td><td class="gain">+7.7</td></tr>
+        <tr><td>MOUS (N = 825)</td><td>Chance</td><td>0.12</td><td>1.21</td><td>413</td><td>&ndash;</td></tr>
+        <tr><td></td><td>Gaussian input</td><td>0.12</td><td>1.21</td><td>410</td><td>0.00</td></tr>
+        <tr class="hl"><td></td><td>Real MEG (Dense-TCNN)</td><td>21.7</td><td>46.6</td><td>13.3</td><td class="gain">+6.9</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>The local score resolves each window's stimulus content, not the sentence it belongs to: when it is wrong, its top choice falls in the target's sentence 1.0% of the time, close to the 1.1% expected from sentence lengths alone. Ranking within the correct sentence, with logits fixed, raises R@1 from 44% to 88%. That gap is the room a sentence-level context stage can recover.</p>
+  <figure>
+    <div class="frame"><img src="static/figs/local_evidence.png" alt="Left: same-sentence share of top-1 errors, observed 1.0% vs expected 1.1%. Right: R@1, R@5, R@10 in the full pool (44.1, 65.7, 73.6) and within the target sentence (87.9, 98.2, 99.5)."></div>
+    <figcaption><b>Local errors and the within-sentence oracle.</b> Left: share of top-1 errors that fall within the target's sentence, observed (mean &plusmn; std over three seeds) and expected from sentence lengths. Right: the same frozen local scores ranked in the full pool and among the candidates of the target's sentence (one checkpoint); the dashed line marks chance within a sentence.</figcaption>
+  </figure>
+</section>
+
+<section id="context">
+  <h2>When can a contextual gain be credited to the brain?</h2>
+  <p>A training-free sentence-bucket aggregation pools a sentence's window scores and shifts whole candidate sentences by additive shallow fusion. On the same frozen logits it raises R@1 from 44.4% to 52.1% on Gwilliams and from 21.7% to 28.6% on MOUS, positive for all three encoders and, with Dense-TCNN, for every participant. The controls then test what that gain rests on.</p>
+  <h3>The gain falls with local evidence and vanishes without it</h3>
+  <p>Breaking the sentence grouping lowers it. Mixing query windows with stimulus-mismatched MEG shrinks it from +7.7 points to zero as local R@1 approaches chance, across four attenuation families. Across participants, the gain rises with local R@1 (Spearman &rho; = 0.88 on Gwilliams, 0.90 on MOUS). On Gaussian inputs and on EEG, where local evidence is near chance, it yields nothing.</p>
+  <h3>A stage that reads sentence length fails the same test</h3>
+  <p>Because query groups and candidate sentences share boundaries, sentence length alone points to the right sentence. A stage that selects sentences this way peaks at a 16.8-point gain under attenuation and keeps about 1.5% R@1, some 22&times; chance, with no evidence at all. Both stages use structure; only aggregation's gain needs the recording.</p>
+  <figure>
+    <div class="frame"><img src="static/figs/context_controls.png" alt="Three panels: aggregation R@1 falls as grouping is perturbed; gain versus local R@1 under attenuation for four families and a size-matching stage; per-participant aggregation gain versus local R@1."></div>
+    <figcaption><b>Grouping and evidence controls.</b> <b>(a)</b> Moving a fraction <i>p</i> of query windows to a neighbouring sentence (jitter) or a random sentence in the same story (reassignment) lowers aggregation R@1; local retrieval is unchanged. <b>(b)</b> Gain versus local R@1 as evidence is attenuated: aggregation under four attenuation families (solid; the star marks clean MEG) and a stage that selects sentences by length alone (dashed). <b>(c)</b> Aggregation gain versus local R@1, one point per participant on Gwilliams and MOUS; dashed lines mark chance.</figcaption>
+  </figure>
+</section>
+
+<section id="takeaway">
+  <h2>Using source attribution</h2>
+  <div class="takeaway">
+    <p>The checks require no change to a pipeline's task, architecture, or training, and can be placed at the decoder input of any encoder&ndash;decoder pipeline:</p>
+    <ol>
+      <li>Read the score out before the decoder, as retrieval over the test stimuli with a known chance level.</li>
+      <li>Replace only the neural content, keeping length, padding, and masks, to expose what the input's structure carries.</li>
+      <li>Credit a contextual gain to the brain only if it falls with the local evidence and vanishes without it.</li>
+    </ol>
+  </div>
+</section>
+
+<section id="bibtex">
+  <h2>BibTeX</h2>
+<pre><code>@misc{anonymous2026decoding,
+  title  = {What Are We Actually Decoding? Retrieval-Based Source Attribution
+            for Non-Invasive Neural Language Decoding},
+  author = {Anonymous},
+  year   = {2026},
+  note   = {Under review}
+}</code></pre>
+</section>
+
 </main>
+
+<footer class="wrap">
+  Anonymous project page. Author information will be added after the review period.
+</footer>
+
 </body>
 </html>
