@@ -181,11 +181,15 @@
   #where .pipe .node.on2 { background:var(--alert); color:#fff; border-color:var(--alert); }
   #where .pipe .node.on1 { border:2px dashed var(--muted); color:var(--ink-2); }
   .two-eq { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  #where .col { display:flex; flex-direction:column; }
+  #where .col .pipe { margin:0 0 10px; flex-wrap:nowrap; gap:5px; }
+  #where .col .pipe .node { font-size:0.8rem; padding:6px 9px; white-space:nowrap; }
+  #where .col .panel { flex:1; }
   #where .panel { background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:14px 16px; }
   .panel-k { font-size:0.78rem; letter-spacing:0.06em; text-transform:uppercase; color:var(--muted); font-weight:700; }
   .panel-v { font-size:1.35rem; font-weight:800; margin:2px 0 4px; }
   .panel-v.hl2 { color:var(--alert); }
-  @media (max-width:760px) { .two-eq { grid-template-columns:1fr; } }
+  @media (max-width:760px) { .two-eq { grid-template-columns:1fr; } #where .col .pipe { flex-wrap:wrap; } }
   #where .panel .seg { margin:6px 0 4px; }
   /* toy */
   .toy-row { transition:transform .35s ease; }
@@ -291,24 +295,31 @@
   <p>A typical brain-to-text system passes a recording through an encoder and then a language or speech model that writes the text, which a metric then scores. Everything after the encoder can add score without the brain: the language model writes fluent sentences on its own, and text metrics are lenient. The same noise test therefore gives opposite answers depending on <b>where the score is read</b>:</p>
 
   <div class="viz" id="where">
-    <div class="pipe" aria-label="Pipeline">
-      <div class="node">Brain recording</div><div class="arr">&rarr;</div>
-      <div class="node">Encoder</div><div class="arr">&rarr;</div>
-      <div class="node on2">&#9312; Read here</div><div class="arr">&rarr;</div>
-      <div class="node dim2">Language model</div><div class="arr">&rarr;</div>
-      <div class="node dim2">Text</div><div class="arr">&rarr;</div>
-      <div class="node on1">&#9313; or here</div>
-    </div>
     <div class="two-eq">
-      <div class="panel">
-        <div class="panel-k">&#9313; Read at the output</div>
-        <div class="panel-v">Looks clean</div>
-        <p class="note" style="margin:6px 0 0">Published noise tests replace the whole input and score the generated text: it comes out near zero. Yet the metric itself is lenient: a fixed filler like &ldquo;the the&rdquo;, which ignores the brain entirely, gets a BERTScore of 0.87 against real sentences.</p>
+      <div class="col">
+        <div class="pipe">
+          <div class="node">Recording</div><div class="arr">&rarr;</div>
+          <div class="node">Encoder</div><div class="arr">&rarr;</div>
+          <div class="node on2">&#9312; Read here</div>
+        </div>
+        <div class="panel">
+          <div class="panel-k">&#9312; Before the language model</div>
+          <div class="panel-v hl2">Noise still scores 66%</div>
+          <svg id="swapSvg" viewBox="0 0 360 130" role="img" aria-label="Right sentence matched: real MEG 90.8%, noise of the same length 66.3%, chance 0.8%"></svg>
+        </div>
       </div>
-      <div class="panel">
-        <div class="panel-k">&#9312; Read before the language model</div>
-        <div class="panel-v hl2">Noise still scores 66%</div>
-        <svg id="swapSvg" viewBox="0 0 360 150" role="img" aria-label="Right sentence matched: real MEG 90.8%, noise of the same length 66.3%, chance 0.8%"></svg>
+      <div class="col">
+        <div class="pipe">
+          <div class="arr">&rarr;</div>
+          <div class="node dim2">Language model</div><div class="arr">&rarr;</div>
+          <div class="node dim2">Text</div><div class="arr">&rarr;</div>
+          <div class="node on1">&#9313; Read here</div>
+        </div>
+        <div class="panel">
+          <div class="panel-k">&#9313; At the output</div>
+          <div class="panel-v">Looks clean</div>
+          <p class="note" style="margin:6px 0 0">Published noise tests replace the whole input and score the generated text: it comes out near zero. Yet the metric itself is lenient: a fixed filler like &ldquo;the the&rdquo;, which ignores the brain entirely, gets a BERTScore of 0.87 against real sentences.</p>
+        </div>
       </div>
     </div>
   </div>
@@ -502,9 +513,9 @@
   /* ---------- length key (illustrative) ---------- */
   (function () {
     const S = [["The cat sat down.", 1.5], ["She opened the old wooden door.", 2.4], ["It rained all night long.", 1.9],
-               ["We walked to the station after dinner.", 3.1], ["He finally understood what she had meant all along.", 4.2], ["The river was quiet.", 1.6]];
+               ["We walked home after dinner.", 3.1], ["He finally saw what she meant.", 4.2], ["The river was quiet.", 1.6]];
     const svg = document.getElementById("keySvg");
-    const W = 640, L = 270, R = 20, T = 8, rh = 32, maxS = 4.8;
+    const W = 640, L = 230, R = 20, T = 8, rh = 32, maxS = 4.8;
     const x = v => L + v / maxS * (W - L - R);
     const rows = S.map((s, i) => {
       const y0 = T + i * rh;
