@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>What Are We Actually Decoding?</title>
-<meta name="description" content="Feed a brain decoder noise instead of brain signals, and it can still pick the right sentence 66% of the time. Source attribution measures where a decoding score comes from.">
+<meta name="description" content="In an end-to-end sentence decoder, noise in place of brain signals still picked the right sentence 66% of the time. Source attribution measures where a decoding score comes from.">
 <meta property="og:title" content="What Are We Actually Decoding?">
 <meta property="og:description" content="Retrieval-based source attribution for non-invasive neural language decoding.">
 <style>
@@ -154,6 +154,8 @@
   .eq { text-align:center; font-size:1.15rem; margin:6px 0 18px; padding:14px; background:var(--soft); border:1px solid var(--line); border-radius:10px; overflow-x:auto; font-family:"Times New Roman", Times, serif; }
 
   .rq { margin:0 0 30px; padding:14px 18px; border-left:4px solid var(--alert); background:var(--soft); border-radius:0 10px 10px 0; font-size:1.12rem; font-weight:600; line-height:1.45; }
+  .rq.switch { border-left-color:var(--fused); font-weight:500; font-size:1rem; }
+  .rq.switch span { color:var(--fused); }
   .rq span { display:block; font-size:0.75rem; letter-spacing:0.08em; text-transform:uppercase; color:var(--alert); font-weight:700; margin-bottom:4px; }
 
 
@@ -247,9 +249,9 @@
     <a href="#shortcut"><span>Observation</span></a>
     <a href="#method"><span>Method</span></a>
     <a href="#evidence"><span>Brain evidence</span></a>
-    <a href="#context"><span>A test for context</span></a>
+    <a href="#context"><span>Criterion</span></a>
     <a href="#result"><span>Result</span></a>
-    <a href="#vision"><span>Vision</span></a>
+    <a href="#vision"><span>Impact</span></a>
     <a href="#abstract"><span>Abstract</span></a>
   </nav>
 </aside>
@@ -260,17 +262,17 @@
 
 <header class="hero wrap" id="top">
   <p class="kicker">Brain&ndash;computer interfaces &middot; Neural decoding &middot; Evaluation</p>
-  <h1>Feed a brain decoder noise instead of brain signals. <em>It still picks the right sentence 66% of the time.</em></h1>
+  <h1>We fed a sentence decoder noise instead of brain signals. <em>It still picked the right sentence 66% of the time.</em></h1>
   <div class="dims">
     <div class="dim">
       <div class="dim-k">The score</div>
-      <div class="dim-t">A decoding score mixes several sources</div>
-      <p>Brain-to-text systems pass a brain recording through an encoder and then a pretrained language or speech model that writes the text. A high score can come from the brain, but also from the shape of the input, such as how long the recording is, from the language model's knowledge of what sentences look like, or from a lenient text metric. The finished text cannot tell them apart.</p>
+      <div class="dim-t">A high score can come from anywhere.</div>
+      <p>The brain, the recording's length, the language model's knowledge of sentences, a lenient metric: the finished text cannot tell them apart.</p>
     </div>
     <div class="dim">
       <div class="dim-k">The user</div>
-      <div class="dim-t">Only one source is the user's own</div>
-      <p>For someone who relies on a brain&ndash;computer interface to speak, only the part of the score read from their brain is their voice. Claims of progress, and a user's trust, rest on knowing how large that part is.</p>
+      <div class="dim-t">Only one source is the user's voice.</div>
+      <p>For someone who speaks through a brain&ndash;computer interface, only what is read from their brain is theirs.</p>
     </div>
   </div>
   <p class="join">We turn this from an assumption into a measurement: read the score <b>before the language model enters</b>, and give each source <b>its own test</b>.</p>
@@ -279,7 +281,7 @@
   <div class="answers">
     <div class="answers-h">Our answer</div>
     <ol>
-      <li><span class="aq">Where does the score come from?</span><b>Much of it from a shortcut in the input, not the brain.</b> Sentence decoders pad each recording to a common length and mark where the real signal ends. When the brain signal is weak, that length is the easiest cue to learn. Noise that keeps only the length picks the right sentence 66.3% of the time; real MEG gets 90.8%.</li>
+      <li><span class="aq">Where does the score come from?</span><b>In the pipeline we examined, much of it came from a shortcut in the input.</b> Like many sentence-level designs, it pads each recording to a common length and marks where the real signal ends; with a weak brain signal, that length is an easy cue to learn. Read before its language model, noise that keeps only the length picks the right sentence 66.3% of the time, against 90.8% for real MEG. The point is not that the decoder fails, but that its output score cannot show how much of it comes from the brain.</li>
       <li><span class="aq">Where can you see it?</span><b>Only before the language model.</b> At the output, the language model writes fluent text from anything and lenient metrics reward it, so the shortcut hides. Read the score just before the language model, as a ranking of the test stimuli with a known chance level, and it shows. Read there with length removed, the brain alone still ranks the right audio first 44% of the time among 1,464 candidates, about 650 times chance.</li>
       <li><span class="aq">What counts as a real gain from context?</span><b>One that disappears when the brain signal does. A bigger gain is not a better one.</b> A context step that just matches sentences by length raises the score by up to 16.8 points, and with no brain signal at all it still scores about 22 times chance. A gain can be credited to the brain only if it shrinks as the brain evidence weakens and vanishes without it, as our sentence pooling does.</li>
     </ol>
@@ -318,7 +320,7 @@
         <div class="panel">
           <div class="panel-k">&#9313; At the output</div>
           <div class="panel-v">Looks clean</div>
-          <p class="note" style="margin:6px 0 0">Published noise tests replace the whole input and score the generated text: it comes out near zero. Yet the metric itself is lenient: a fixed filler like &ldquo;the the&rdquo;, which ignores the brain entirely, gets a BERTScore of 0.87 against real sentences.</p>
+          <p class="note" style="margin:6px 0 0">Noise tests reported for such pipelines replace the whole input and score the generated text, which comes out near zero. Yet the metric itself is lenient: a fixed filler like &ldquo;the the&rdquo;, which ignores the brain entirely, gets a BERTScore of 0.87 against real sentences.</p>
         </div>
       </div>
     </div>
@@ -330,7 +332,7 @@
 <section id="shortcut">
   <p class="step">Observation</p>
   <h2>A length shortcut in the input</h2>
-  <p>Sentence decoders pad every recording to a common length and tell the model where the real signal ends. That length travels with the input into the decoder. When the brain signal is weak, it is the easiest cue to learn, and any score read at the output silently includes it.</p>
+  <p>Many sentence-level pipelines pad every recording to a common length and tell the model where the real signal ends. That length travels with the input into the decoder. When the brain signal is weak, it can become the easiest cue to learn, and a score read at the output includes it without saying so.</p>
   <div class="viz" id="key">
     <div class="viz-head">
       <div class="viz-title">Length works like a key</div>
@@ -371,6 +373,7 @@
 <section id="evidence">
   <p class="step">Brain evidence</p>
   <h2>What the brain signal supports on its own</h2>
+  <p class="rq switch"><span>A different task from here on</span>Above, a whole sentence-long recording had to pick the right sentence (90.8%). From here on, a <b>3-second window</b> has to pick the right <b>3-second audio clip among 1,464</b>, so length cannot help. The numbers below are not comparable with those above.</p>
   <p>With length removed, a 3-second MEG window is matched against the audio of every word window in the test set. Real MEG ranks the right audio first <b>44.4%</b> of the time among 1,464 candidates, about 650 times chance, and <b>21.7%</b> among 825 on a second dataset. Noise stays at chance. Every single participant is above chance.</p>
   <p>This score reads the word, not the sentence around it: when it is wrong, its top pick lies in the right sentence only 1.0% of the time, the same as expected from sentence lengths alone (1.1%). So what would knowing the sentence add?</p>
   <div class="viz" id="oracle">
@@ -384,7 +387,7 @@
 </section>
 
 <section id="context">
-  <p class="step">A test for context</p>
+  <p class="step">Criterion</p>
   <h2>When can a gain from context be credited to the brain?</h2>
   <p>We add context back with a simple, training-free step: pool the scores of all windows in a sentence to guess which sentence they come from, and nudge the candidates of that sentence up. It raises accuracy from 44.4% to <b>52.1%</b>, and from 21.7% to <b>28.6%</b> on the second dataset. But a language model also &ldquo;adds context&rdquo;, and it can produce fluent sentences from noise. What separates a gain built on the brain from one that stands in for it?</p>
 
@@ -408,7 +411,7 @@
     </div>
     <div class="slider-row">
       <label for="attS">Brain evidence kept</label>
-      <input type="range" id="attS" min="0" max="5" step="1" value="0">
+      <input type="range" id="attS" min="0" max="5" step="1" value="5">
       <output id="attOut">100%</output>
     </div>
     <div class="legend">
@@ -440,7 +443,7 @@
 </section>
 
 <section id="vision">
-  <p class="step">Vision</p>
+  <p class="step">Impact</p>
   <h2>From assumption to measurement</h2>
   <p class="big">Non-invasive decoders now write fluent sentences, and whether they read the brain has so far been assumed from the score. For someone who will one day speak through such a system, that is the question that matters. Source attribution answers it with three checks that need no change to a system's task, architecture or training:</p>
   <ol class="rules">
@@ -589,7 +592,7 @@
     });
   }
   const attS = document.getElementById("attS");
-  attS.addEventListener("input", () => { step = +attS.value; drawAtt(); });
+  attS.addEventListener("input", () => { step = 5 - attS.value; drawAtt(); });
   document.querySelectorAll("#att .seg button").forEach(b => b.addEventListener("click", () => {
     document.querySelectorAll("#att .seg button").forEach(o => o.setAttribute("aria-pressed", o === b)); mode = b.dataset.m; drawAtt();
   }));
@@ -620,8 +623,8 @@
     let played = false;
     function play() {
       played = true;
-      let i = 0; attS.value = 0; step = 0; drawAtt();
-      const t = setInterval(() => { i++; if (i > 5) { clearInterval(t); return; } attS.value = i; step = i; drawAtt(); }, 700);
+      let i = 0; attS.value = 5; step = 0; drawAtt();
+      const t = setInterval(() => { i++; if (i > 5) { clearInterval(t); return; } attS.value = 5 - i; step = i; drawAtt(); }, 700);
     }
     if ("IntersectionObserver" in window) {
       const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting && !played) { play(); io.disconnect(); } }), { threshold: 0.55 });
